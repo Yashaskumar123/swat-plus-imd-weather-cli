@@ -1,0 +1,4 @@
+imdlib>=0.2.0
+openpyxl>=3.1
+pandas>=2.0
+xlrd>=2.0
