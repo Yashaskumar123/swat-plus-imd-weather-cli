@@ -20,7 +20,7 @@ except ModuleNotFoundError as exc:
     raise SystemExit(1) from exc
 
 
-REQUIRED_COLUMNS = ("NAME", "LONG", "LAT", "ELEVATION")
+REQUIRED_COLUMNS = ("ID", "NAME", "LAT", "LONG", "ELEVATION")
 STATION_COLUMN_ALIASES = {
     "STATION": "NAME",
     "ELEV": "ELEVATION",
@@ -170,10 +170,11 @@ def load_stations(excel_file: Path) -> pd.DataFrame:
         selected_columns[column] = matches.bfill(axis=1).iloc[:, 0]
 
     stations = pd.DataFrame(selected_columns)
-    for column in ("LONG", "LAT", "ELEVATION"):
+    for column in ("ID", "LAT", "LONG", "ELEVATION"):
         stations[column] = pd.to_numeric(stations[column], errors="coerce")
     invalid = stations[
-        stations["NAME"].isna()
+        stations["ID"].isna()
+        | stations["NAME"].isna()
         | stations["LONG"].isna()
         | stations["LAT"].isna()
         | stations["ELEVATION"].isna()
@@ -181,6 +182,13 @@ def load_stations(excel_file: Path) -> pd.DataFrame:
     if not invalid.empty:
         rows = ", ".join(str(int(index) + 2) for index in invalid.index)
         raise ValueError(f"Blank or invalid values in Excel row(s): {rows}")
+
+    duplicate_ids = stations[stations["ID"].duplicated(keep=False)]
+    if not duplicate_ids.empty:
+        ids = ", ".join(
+            str(value) for value in duplicate_ids["ID"].drop_duplicates()
+        )
+        raise ValueError(f"Duplicate station ID value(s): {ids}")
 
     return stations
 
@@ -399,7 +407,7 @@ def process_stations(
             print(f"Written: {output_path.name}")
             metadata_rows.append(
                 {
-                    "ID": len(metadata_rows) + 1,
+                    "ID": row["ID"],
                     "NAME": station,
                     "LAT": latitude,
                     "LONG": longitude,
@@ -425,7 +433,7 @@ def process_stations(
 
 def main() -> int:
     print("SWAT+ IMD Weather File Creator")
-    print("Required Excel columns: NAME, LONG, LAT, ELEVATION\n")
+    print("Required Excel columns: ID, Station, Lat, Long, Elevation\n")
 
     try:
         grd_files_exist = prompt_grd_files_exist()

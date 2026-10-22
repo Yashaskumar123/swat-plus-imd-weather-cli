@@ -83,25 +83,22 @@ lists in separate workbooks when the locations are different, for example:
 - `precipitation_stations.xlsx` for a `pcp` run.
 
 The CLI asks only for the workbook associated with the selected variable. Each
-workbook must contain one station per row. Either of these column-name styles
-is accepted:
+workbook must contain one station per row with these columns:
 
-| Station | Long | Lat | Elevation |
-| --- | ---: | ---: | ---: |
-| Station_1 | 77.50 | 15.50 | 620 |
-| Station_2 | 78.50 | 16.50 | 745 |
+| ID | Station | Lat | Long | Elevation |
+| --: | ------- | --: | ---: | --------: |
+| 1 | Station_1 | 15.50 | 77.50 | 620 |
+| 2 | Station_2 | 16.50 | 78.50 | 745 |
 
-or:
+- `ID` is the unique station identifier copied to the master file.
+- `Station` becomes the SWAT+ station filename and the master-file `NAME`.
+- `Lat` is latitude in decimal degrees.
+- `Long` is longitude in decimal degrees.
+- `Elevation` is station elevation in metres and is copied unchanged to the
+  master file.
 
-| NAME | LONG | LAT | ELEVATION |
-| --- | ---: | ---: | ---: |
-| Station_1 | 77.50 | 15.50 | 620 |
-| Station_2 | 78.50 | 16.50 | 745 |
-
-- `Station` or `NAME` becomes the SWAT+ output filename.
-- `Long` or `LONG` is longitude in decimal degrees.
-- `Lat` or `LAT` is latitude in decimal degrees.
-- `Elevation` or `ELEVATION` is station elevation in metres.
+Column capitalization is not important. `NAME` may also be used instead of
+`Station`, but all five data fields are required.
 
 The coordinates must fall within the grid covered by the selected IMD
 dataset.
@@ -236,7 +233,8 @@ D:\IITD\Jupyter_notebook\IITD\data\pcp.txt
 D:\IITD\Jupyter_notebook\IITD\data\<station>.pcp
 ```
 
-The metadata file uses this CSV structure:
+The metadata file uses this CSV structure. The `ID` and `ELEVATION` values are
+copied from the selected station workbook:
 
 ```text
 ID,NAME,LAT,LONG,ELEVATION
@@ -260,8 +258,8 @@ results must be retained.
   the files use the yearwise names expected by `imdlib`.
 - **GRD download failed**: Check the internet connection and confirm that IMD
   has published the selected years.
-- **Missing Excel columns**: Use `Station`, `Long`, `Lat`, `Elevation` or
-  `NAME`, `LONG`, `LAT`, `ELEVATION`.
+- **Missing Excel columns**: Include `ID`, `Station`, `Lat`, `Long`, and
+  `Elevation` in the selected workbook.
 - **Coordinate extraction failed**: Check that latitude and longitude are
   numeric and inside the IMD grid.
 - **Missing dependency**: Activate the virtual environment and run
