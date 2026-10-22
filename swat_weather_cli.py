@@ -20,8 +20,12 @@ except ModuleNotFoundError as exc:
     raise SystemExit(1) from exc
 
 
-REQUIRED_COLUMNS = ("NAME", "LONG", "LAT")
-STATION_COLUMN_ALIASES = {"STATION": "NAME"}
+REQUIRED_COLUMNS = ("NAME", "LONG", "LAT", "ELEVATION")
+STATION_COLUMN_ALIASES = {
+    "STATION": "NAME",
+    "ELEV": "ELEVATION",
+    "ALTITUDE": "ELEVATION",
+}
 INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
 
@@ -150,13 +154,29 @@ def load_stations(excel_file: Path) -> pd.DataFrame:
     if missing:
         raise ValueError("Missing Excel column(s): " + ", ".join(missing))
 
-    stations = stations.loc[:, list(REQUIRED_COLUMNS)].copy()
-    stations["LONG"] = pd.to_numeric(stations["LONG"], errors="coerce")
-    stations["LAT"] = pd.to_numeric(stations["LAT"], errors="coerce")
+    # Merge repeated aliases such as Station/NAME or Lat/LAT when their values
+    # agree. This also handles workbooks that contain both accepted layouts.
+    selected_columns: dict[str, pd.Series] = {}
+    for column in REQUIRED_COLUMNS:
+        matches = stations.loc[:, stations.columns == column]
+        conflicting_rows = matches.nunique(axis=1, dropna=True) > 1
+        if conflicting_rows.any():
+            rows = ", ".join(
+                str(int(index) + 2) for index in matches.index[conflicting_rows]
+            )
+            raise ValueError(
+                f"Conflicting duplicate '{column}' values in Excel row(s): {rows}"
+            )
+        selected_columns[column] = matches.bfill(axis=1).iloc[:, 0]
+
+    stations = pd.DataFrame(selected_columns)
+    for column in ("LONG", "LAT", "ELEVATION"):
+        stations[column] = pd.to_numeric(stations[column], errors="coerce")
     invalid = stations[
         stations["NAME"].isna()
         | stations["LONG"].isna()
         | stations["LAT"].isna()
+        | stations["ELEVATION"].isna()
     ]
     if not invalid.empty:
         rows = ", ".join(str(int(index) + 2) for index in invalid.index)
@@ -324,6 +344,7 @@ def process_stations(
     processed = 0
     skipped = 0
     used_output_names: set[str] = set()
+    metadata_rows: list[dict[str, object]] = []
 
     for _, row in stations.iterrows():
         station = safe_station_name(row["NAME"])
@@ -376,17 +397,35 @@ def process_stations(
             output_path = output_dir / output_name
             output_path.write_text("\n".join(output_lines), encoding="utf-8")
             print(f"Written: {output_path.name}")
+            metadata_rows.append(
+                {
+                    "ID": len(metadata_rows) + 1,
+                    "NAME": station,
+                    "LAT": latitude,
+                    "LONG": longitude,
+                    "ELEVATION": float(row["ELEVATION"]),
+                }
+            )
             processed += 1
         except Exception as exc:
             print(f"Skipped {station}: {exc}")
             skipped += 1
+
+    if metadata_rows:
+        metadata_path = output_dir / f"{variable}.txt"
+        pd.DataFrame(metadata_rows).to_csv(
+            metadata_path,
+            index=False,
+            float_format="%.10g",
+        )
+        print(f"Written station metadata: {metadata_path.name}")
 
     return processed, skipped
 
 
 def main() -> int:
     print("SWAT+ IMD Weather File Creator")
-    print("Required Excel columns: NAME, LONG, LAT\n")
+    print("Required Excel columns: NAME, LONG, LAT, ELEVATION\n")
 
     try:
         grd_files_exist = prompt_grd_files_exist()

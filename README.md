@@ -86,21 +86,22 @@ The CLI asks only for the workbook associated with the selected variable. Each
 workbook must contain one station per row. Either of these column-name styles
 is accepted:
 
-| Station | Long | Lat |
-| --- | ---: | ---: |
-| Station_1 | 77.50 | 15.50 |
-| Station_2 | 78.50 | 16.50 |
+| Station | Long | Lat | Elevation |
+| --- | ---: | ---: | ---: |
+| Station_1 | 77.50 | 15.50 | 620 |
+| Station_2 | 78.50 | 16.50 | 745 |
 
 or:
 
-| NAME | LONG | LAT |
-| --- | ---: | ---: |
-| Station_1 | 77.50 | 15.50 |
-| Station_2 | 78.50 | 16.50 |
+| NAME | LONG | LAT | ELEVATION |
+| --- | ---: | ---: | ---: |
+| Station_1 | 77.50 | 15.50 | 620 |
+| Station_2 | 78.50 | 16.50 | 745 |
 
 - `Station` or `NAME` becomes the SWAT+ output filename.
 - `Long` or `LONG` is longitude in decimal degrees.
 - `Lat` or `LAT` is latitude in decimal degrees.
+- `Elevation` or `ELEVATION` is station elevation in metres.
 
 The coordinates must fall within the grid covered by the selected IMD
 dataset.
@@ -215,6 +216,34 @@ NA
 
 The file is saved as `<station>.pcp`.
 
+Each run also creates a station metadata file in the same output directory:
+
+- A `tmp` run creates `tmp.txt` alongside the station `.tmp` files.
+- A `pcp` run creates `pcp.txt` alongside the station `.pcp` files.
+
+For example, selecting `D:\IITD\Jupyter_notebook\IITD\data` as the output
+directory creates:
+
+```text
+D:\IITD\Jupyter_notebook\IITD\data\tmp.txt
+D:\IITD\Jupyter_notebook\IITD\data\<station>.tmp
+```
+
+or:
+
+```text
+D:\IITD\Jupyter_notebook\IITD\data\pcp.txt
+D:\IITD\Jupyter_notebook\IITD\data\<station>.pcp
+```
+
+The metadata file uses this CSV structure:
+
+```text
+ID,NAME,LAT,LONG,ELEVATION
+1,Station_1,15.5,77.5,620
+2,Station_2,16.5,78.5,745
+```
+
 ## 7. Rerunning the program
 
 The intermediate station CSV files are recreated from the GRD files each time.
@@ -231,8 +260,8 @@ results must be retained.
   the files use the yearwise names expected by `imdlib`.
 - **GRD download failed**: Check the internet connection and confirm that IMD
   has published the selected years.
-- **Missing Excel columns**: Use `Station`, `Long`, `Lat` or `NAME`, `LONG`,
-  `LAT`.
+- **Missing Excel columns**: Use `Station`, `Long`, `Lat`, `Elevation` or
+  `NAME`, `LONG`, `LAT`, `ELEVATION`.
 - **Coordinate extraction failed**: Check that latitude and longitude are
   numeric and inside the IMD grid.
 - **Missing dependency**: Activate the virtual environment and run
