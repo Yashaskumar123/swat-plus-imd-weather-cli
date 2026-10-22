@@ -100,11 +100,37 @@ dataset.
 
 ## 4. Run the CLI
 
-From the cloned repository directory, run:
+From the cloned repository directory, activate the virtual environment and run
+the Python file:
 
 ```powershell
-python swat_weather_cli.py
+.\.venv\Scripts\Activate.ps1
+python .\swat_weather_cli.py
 ```
+
+If you do not want to activate the virtual environment first, call its Python
+executable directly:
+
+```powershell
+.\.venv\Scripts\python.exe .\swat_weather_cli.py
+```
+
+Module syntax also works when you are inside the repository directory:
+
+```powershell
+python -m swat_weather_cli
+```
+
+Do not combine `-m` with a file path:
+
+```powershell
+# Incorrect: -m expects a module name, not a relative file path
+python -m .\swat_weather_cli.py
+```
+
+The incorrect form produces `Relative module names not supported`. Use either
+the file command `python .\swat_weather_cli.py` or the module command
+`python -m swat_weather_cli`.
 
 The program asks for the following values:
 
