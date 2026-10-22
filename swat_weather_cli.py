@@ -30,6 +30,17 @@ def clean_path(value: str) -> Path:
     return Path(value.strip().strip('"').strip("'")).expanduser().resolve()
 
 
+def prompt_grd_files_exist() -> bool:
+    while True:
+        value = input("Do the required GRD files already exist locally? (yes/no): ")
+        answer = value.strip().lower()
+        if answer in {"yes", "y"}:
+            return True
+        if answer in {"no", "n"}:
+            return False
+        print("Enter 'yes' or 'no'.")
+
+
 def prompt_existing_directory() -> Path:
     while True:
         raw = input(
@@ -42,6 +53,23 @@ def prompt_existing_directory() -> Path:
         if path.is_dir():
             return path
         print(f"Directory not found: {path}")
+
+
+def prompt_download_directory() -> Path:
+    while True:
+        raw = input("Directory where downloaded GRD files should be saved: ").strip()
+        if not raw:
+            print("Please enter a directory path.")
+            continue
+        path = clean_path(raw)
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(f"Cannot create or use that directory: {exc}")
+            continue
+        if path.is_dir():
+            return path
+        print(f"The path is not a directory: {path}")
 
 
 def prompt_excel_file() -> Path:
@@ -140,27 +168,46 @@ def extract_imd_station_csvs(
     variable: str,
     start_year: int,
     end_year: int,
+    download_grd: bool,
 ) -> None:
-    """Open existing yearwise IMD GRD files and extract each station to CSV."""
+    """Download or open IMD GRD files and extract each station to CSV."""
     imd_variables = ("tmax", "tmin") if variable == "tmp" else ("rain",)
 
-    print("\nExtracting station CSV files from IMD gridded data...")
+    if download_grd:
+        print("\nDownloading missing IMD GRD files...")
+    else:
+        print("\nOpening existing IMD GRD files...")
+
     for imd_variable in imd_variables:
         variable_folder = source_dir / imd_variable
-        if not variable_folder.is_dir():
+        if not download_grd and not variable_folder.is_dir():
             raise ValueError(f"Required folder not found: {variable_folder}")
 
         try:
-            data = imd.open_data(
-                imd_variable,
-                start_year,
-                end_year,
-                "yearwise",
-                str(source_dir),
-            )
+            if download_grd:
+                data = imd.get_data(
+                    imd_variable,
+                    start_year,
+                    end_year,
+                    fn_format="yearwise",
+                    file_dir=str(source_dir),
+                )
+                if data is None:
+                    raise RuntimeError(
+                        "imdlib did not return data; check the download message above"
+                    )
+            else:
+                data = imd.open_data(
+                    imd_variable,
+                    start_year,
+                    end_year,
+                    "yearwise",
+                    str(source_dir),
+                )
         except Exception as exc:
+            action = "download/open" if download_grd else "open"
             raise ValueError(
-                f"Could not open {imd_variable} GRD data for "
+                f"Could not {action} {imd_variable} GRD data for "
                 f"{start_year}-{end_year}: {exc}"
             ) from exc
 
@@ -339,7 +386,12 @@ def main() -> int:
     print("Required Excel columns: NAME, LONG, LAT\n")
 
     try:
-        source_dir = prompt_existing_directory()
+        grd_files_exist = prompt_grd_files_exist()
+        source_dir = (
+            prompt_existing_directory()
+            if grd_files_exist
+            else prompt_download_directory()
+        )
         excel_file = prompt_excel_file()
         variable = prompt_variable()
         start_year = prompt_year("Start year")
@@ -348,6 +400,10 @@ def main() -> int:
         stations = load_stations(excel_file)
 
         print("\nSettings")
+        print(
+            "  GRD mode:         "
+            + ("use existing files" if grd_files_exist else "download missing files")
+        )
         print(f"  Source directory: {source_dir}")
         print(f"  Station Excel:    {excel_file}")
         print(f"  Variable:         {variable}")
@@ -360,6 +416,7 @@ def main() -> int:
             variable,
             start_year,
             end_year,
+            download_grd=not grd_files_exist,
         )
 
         processed, skipped = process_stations(

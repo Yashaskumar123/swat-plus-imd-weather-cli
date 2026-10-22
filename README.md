@@ -1,13 +1,13 @@
 # SWAT+ IMD Weather CLI
 
-A command-line tool that extracts station-level time series from existing IMD
-yearwise gridded data and creates SWAT+ weather input files.
+A command-line tool that extracts station-level time series from IMD yearwise
+gridded data and creates SWAT+ weather input files.
 
 - `tmp` creates one `<station>.tmp` file from IMD `tmax` and `tmin` data.
 - `pcp` creates one `<station>.pcp` file from IMD rainfall data.
 
-The tool reads station names and coordinates from an Excel file. It does not
-download IMD data; the yearwise GRD files must already be available locally.
+The tool reads station names and coordinates from an Excel file. It can use
+GRD files already stored locally or download missing GRD files from IMD.
 
 ## 1. Install from GitHub
 
@@ -33,10 +33,18 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## 2. Prepare the yearwise IMD data
+## 2. Choose how to obtain the IMD GRD data
 
-Place the existing yearwise GRD files inside variable-specific folders under
-one source directory.
+When the program asks whether the required GRD files already exist locally:
+
+- Enter `yes` to use existing files. Select a source directory containing the
+  variable-specific folders shown below.
+- Enter `no` to download the files. Select an existing or new directory where
+  the program should save them. The program creates the required `tmax`,
+  `tmin`, or `rain` subfolders automatically.
+
+If using existing files, place the yearwise GRD files inside
+variable-specific folders under one source directory.
 
 For temperature (`tmp`):
 
@@ -100,17 +108,21 @@ python swat_weather_cli.py
 
 The program asks for the following values:
 
-1. **Source directory** containing the `tmax`/`tmin` or `rain` GRD folders.
-2. **Station Excel file** containing station names and coordinates.
-3. **SWAT+ variable**: enter `tmp` or `pcp`.
-4. **Start year** for the output period.
-5. **End year** for the output period.
-6. **Output directory** where the generated SWAT+ files should be saved.
+1. **Do the GRD files exist?** Enter `yes` or `no`.
+2. **GRD directory**:
+   - After `yes`, select the source directory containing the existing files.
+   - After `no`, select the directory where files should be downloaded.
+3. **Station Excel file** containing station names and coordinates.
+4. **SWAT+ variable**: enter `tmp` or `pcp`.
+5. **Start year** for the output period.
+6. **End year** for the output period.
+7. **Output directory** where the generated SWAT+ files should be saved.
 
 Example TMP run:
 
 ```text
-Source directory containing yearwise tmax/tmin/rain GRD folders: D:\IMD\data
+Do the required GRD files already exist locally? (yes/no): no
+Directory where downloaded GRD files should be saved: D:\IMD\data
 Station Excel file (.xlsx or .xls): D:\IMD\stations.xlsx
 SWAT+ variable to create (tmp/pcp): tmp
 Start year: 2010
@@ -124,12 +136,16 @@ Paths containing spaces may be pasted with or without quotation marks.
 
 The program performs these operations in order:
 
-1. Validates the source directory, Excel file, selected variable, years, and
-   output directory.
+1. Reads whether existing GRD files should be used or missing files should be
+   downloaded, then validates the selected directories and other inputs.
 2. Reads the station names, longitudes, and latitudes from Excel.
-3. Opens the existing yearwise GRD files using `imdlib.open_data()`.
-   - A `tmp` run opens both `tmax` and `tmin`.
-   - A `pcp` run opens `rain`.
+3. Obtains the yearwise GRD data:
+   - With `yes`, it opens local files using `imdlib.open_data()` and never
+     downloads data.
+   - With `no`, it uses `imdlib.get_data()`. Valid files already present in the
+     selected directory are reused, and only missing years are downloaded.
+   - A `tmp` run processes both `tmax` and `tmin`; a `pcp` run processes
+     `rain`.
 4. Extracts the daily time series at every station coordinate. Intermediate
    files such as `p_15.50_77.50.csv` are saved in the corresponding `tmax`,
    `tmin`, or `rain` folder.
@@ -167,8 +183,10 @@ The file is saved as `<station>.pcp`.
 ## 7. Rerunning the program
 
 The intermediate station CSV files are recreated from the GRD files each time.
-Existing SWAT+ files with the same station name and extension are replaced.
-Choose a different output directory if previous results must be retained.
+In download mode, valid GRD files already in the selected directory are reused
+instead of downloaded again. Existing SWAT+ files with the same station name
+and extension are replaced. Choose a different output directory if previous
+results must be retained.
 
 ## Common errors
 
@@ -176,6 +194,8 @@ Choose a different output directory if previous results must be retained.
   `tmax` and `tmin` for TMP, or `rain` for PCP.
 - **Could not open GRD data**: Confirm that every selected year exists and that
   the files use the yearwise names expected by `imdlib`.
+- **GRD download failed**: Check the internet connection and confirm that IMD
+  has published the selected years.
 - **Missing Excel columns**: Use `Station`, `Long`, `Lat` or `NAME`, `LONG`,
   `LAT`.
 - **Coordinate extraction failed**: Check that latitude and longitude are
