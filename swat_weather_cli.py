@@ -72,11 +72,14 @@ def prompt_download_directory() -> Path:
         print(f"The path is not a directory: {path}")
 
 
-def prompt_excel_file() -> Path:
+def prompt_excel_file(variable: str) -> Path:
+    station_type = "temperature" if variable == "tmp" else "precipitation"
     while True:
-        raw = input("Station Excel file (.xlsx or .xls): ").strip()
+        raw = input(
+            f"{station_type.capitalize()} station Excel file (.xlsx or .xls): "
+        ).strip()
         if not raw:
-            print("Please enter the station Excel file path.")
+            print(f"Please enter the {station_type} station Excel file path.")
             continue
         path = clean_path(raw)
         if not path.is_file():
@@ -392,8 +395,8 @@ def main() -> int:
             if grd_files_exist
             else prompt_download_directory()
         )
-        excel_file = prompt_excel_file()
         variable = prompt_variable()
+        excel_file = prompt_excel_file(variable)
         start_year = prompt_year("Start year")
         end_year = prompt_year("End year", minimum=start_year)
         output_dir = prompt_output_directory()
@@ -405,7 +408,10 @@ def main() -> int:
             + ("use existing files" if grd_files_exist else "download missing files")
         )
         print(f"  Source directory: {source_dir}")
-        print(f"  Station Excel:    {excel_file}")
+        print(
+            f"  {'Temperature' if variable == 'tmp' else 'Precipitation'} "
+            f"stations: {excel_file}"
+        )
         print(f"  Variable:         {variable}")
         print(f"  Period:           {start_year}-{end_year}")
         print(f"  Output directory: {output_dir}\n")

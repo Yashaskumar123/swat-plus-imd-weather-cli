@@ -74,10 +74,17 @@ Every year in the selected start-to-end range must be present. For example, a
 2010-2024 TMP run needs all yearwise files from 2010 through 2024 in both
 `tmax` and `tmin`.
 
-## 3. Prepare the station Excel file
+## 3. Prepare separate station Excel files
 
-Create an `.xlsx` or `.xls` file with one station per row. Either of these
-column-name styles is accepted:
+Temperature and precipitation can use different stations. Keep their station
+lists in separate workbooks when the locations are different, for example:
+
+- `temperature_stations.xlsx` for a `tmp` run.
+- `precipitation_stations.xlsx` for a `pcp` run.
+
+The CLI asks only for the workbook associated with the selected variable. Each
+workbook must contain one station per row. Either of these column-name styles
+is accepted:
 
 | Station | Long | Lat |
 | --- | ---: | ---: |
@@ -138,8 +145,10 @@ The program asks for the following values:
 2. **GRD directory**:
    - After `yes`, select the source directory containing the existing files.
    - After `no`, select the directory where files should be downloaded.
-3. **Station Excel file** containing station names and coordinates.
-4. **SWAT+ variable**: enter `tmp` or `pcp`.
+3. **SWAT+ variable**: enter `tmp` or `pcp`.
+4. **Variable-specific station Excel file**:
+   - For `tmp`, select the temperature station workbook.
+   - For `pcp`, select the precipitation station workbook.
 5. **Start year** for the output period.
 6. **End year** for the output period.
 7. **Output directory** where the generated SWAT+ files should be saved.
@@ -149,8 +158,8 @@ Example TMP run:
 ```text
 Do the required GRD files already exist locally? (yes/no): no
 Directory where downloaded GRD files should be saved: D:\IMD\data
-Station Excel file (.xlsx or .xls): D:\IMD\stations.xlsx
 SWAT+ variable to create (tmp/pcp): tmp
+Temperature station Excel file (.xlsx or .xls): D:\IMD\temperature_stations.xlsx
 Start year: 2010
 End year: 2024
 Directory for the generated SWAT+ files: D:\SWAT_Project\Scenarios\Default\TxtInOut\weather
